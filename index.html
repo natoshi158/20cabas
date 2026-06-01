@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Las 20 CABA de Lázaro Báez</title>
+<meta name="description" content="Puzzle interactivo: ubicá las 20 superficies de CABA que Lázaro Báez acumuló en Santa Cruz, según el juicio Vialidad.">
+<meta property="og:title" content="Las 20 CABA de Lázaro Báez">
+<meta property="og:description" content="En el juicio Vialidad, el fiscal Luciani demostró que Báez acumuló el equivalente a 20 ciudades de Buenos Aires en Santa Cruz.">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fff;--bg2:#f5f4f0;--bg3:#eceae4;
+  --text:#1a1a18;--text2:#5f5e5a;--text3:#888780;
+  --border:rgba(0,0,0,0.13);--border2:rgba(0,0,0,0.28);
+  --blue:#185FA5;--bluebg:rgba(24,95,165,0.11);
+  --red:#E24B4A;
+  --r:8px;--rlg:12px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#1c1c1a;--bg2:#252523;--bg3:#2e2e2b;
+  --text:#f0efe9;--text2:#b4b2a9;--text3:#888780;
+  --border:rgba(255,255,255,0.12);--border2:rgba(255,255,255,0.28);
+  --blue:#4d9de0;--bluebg:rgba(77,157,224,0.12);
+}}
+html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif}
+body{display:flex;flex-direction:column;align-items:center}
+
+#intro{max-width:560px;text-align:center;padding:3rem 1.5rem 2rem}
+.big-num{font-size:48px;font-weight:600;line-height:1}
+.big-lbl{font-size:12px;color:var(--text3);margin:.3rem 0 1.5rem}
+#intro h1{font-size:22px;font-weight:500;line-height:1.4;margin-bottom:1rem}
+#intro p{font-size:15px;color:var(--text2);line-height:1.75;margin-bottom:.75rem}
+#intro strong{color:var(--text);font-weight:600}
+.btn{display:inline-block;padding:10px 30px;border:1px solid var(--border2);border-radius:var(--r);background:transparent;color:var(--text);font-size:15px;cursor:pointer}
+.btn:hover{background:var(--bg2)}
+
+#puzzle{display:none;width:100%;max-width:860px;padding:0 .75rem 3rem}
+#hdr{padding:.7rem .25rem;display:flex;align-items:center;justify-content:space-between;border-bottom:.5px solid var(--border);margin-bottom:1rem;flex-wrap:wrap;gap:.5rem}
+#hdr h2{font-size:14px;font-weight:500}
+#ctr{font-size:13px;color:var(--text2)}
+#ctr b{color:var(--text)}
+#board{display:flex;gap:1rem;align-items:flex-start;flex-wrap:wrap}
+#map-wrap{flex:1 1 360px;position:relative;user-select:none}
+#sc-svg{display:block;width:100%;touch-action:none}
+#side{flex:0 0 190px;display:flex;flex-direction:column;gap:10px}
+#side h3{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+#tray{display:grid;grid-template-columns:repeat(4,1fr);gap:3px}
+.pc{width:42px;height:38px;display:flex;align-items:center;justify-content:center;border:.5px solid var(--border);border-radius:5px;cursor:grab;background:var(--bg2);user-select:none;touch-action:none}
+.pc:hover{border-color:var(--border2)}
+.pc.active{border:2px solid var(--blue);background:var(--bg)}
+.pc.done{opacity:.15;pointer-events:none}
+.pc svg{width:30px;height:26px;pointer-events:none}
+#rot-box{border:.5px solid var(--border);border-radius:var(--rlg);padding:12px 8px;background:var(--bg2);text-align:center;min-height:108px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+#rot-box .empty-lbl{font-size:11px;color:var(--text3);line-height:1.5}
+#rot-preview{transition:transform .2s}
+.btn-rot{width:100%;padding:7px 0;border:.5px solid var(--border);border-radius:var(--r);background:transparent;color:var(--text);font-size:13px;cursor:pointer}
+.btn-rot:hover{background:var(--bg3)}
+.rot-deg{font-size:10px;color:var(--text3)}
+.hint{font-size:11px;color:var(--text2);line-height:1.65;border-top:.5px solid var(--border);padding-top:8px}
+.disc{font-size:10px;color:var(--text3);line-height:1.55;border-top:.5px solid var(--border);padding-top:8px}
+.disc a{color:var(--blue);text-decoration:none}
+.disc a:hover{text-decoration:underline}
+
+/* floating drag ghost */
+#ghost{position:fixed;pointer-events:none;z-index:9999;display:none;transform-origin:50% 50%}
+
+#win{display:none;max-width:560px;text-align:center;padding:3rem 1.5rem 2rem}
+#win h2{font-size:22px;font-weight:500;margin-bottom:1rem}
+#win p{font-size:14px;color:var(--text2);line-height:1.75;margin-bottom:.75rem}
+blockquote{border-left:2px solid var(--border2);padding:.6rem 1rem;margin:1.25rem auto;max-width:460px;text-align:left;font-size:13px;color:var(--text2);font-style:italic;line-height:1.7}
+.src{font-size:12px;color:var(--text3);margin-top:1rem}
+.src a{color:var(--blue);text-decoration:none}
+.src a:hover{text-decoration:underline}
+@media(max-width:500px){
+  #side{flex:0 0 100%;flex-direction:row;flex-wrap:wrap}
+  #tray{flex:1 1 auto}
+  #rot-box{flex:0 0 150px;min-height:auto}
+  .hint,.disc{flex:1 1 100%}
+}
+</style>
+</head>
+<body>
+
+<div id="intro">
+  <svg viewBox="0 0 60 52" width="76" height="66" style="display:block;margin:0 auto 1rem">
+    <path d="M21,0 L42,9.6 L49.4,16.3 L56,25.7 L54.3,28.3 L49.8,31.9 L41.8,32.8 L36,36.7 L27.6,48 L6.2,35.8 L2,25 L6.9,8.6Z" fill="var(--blue)" opacity=".75"/>
+  </svg>
+  <div class="big-num">20.300 ha</div>
+  <div class="big-lbl">Ciudad Autónoma de Buenos Aires &middot; millones de personas &middot; comercios &middot; industrias</div>
+  <h1>¿Cuánto es 20 veces la Ciudad de Buenos Aires?</h1>
+  <p>En el juicio Vialidad, el fiscal Diego Luciani demostró que Lázaro Báez &mdash; simple monotributista en 2003 &mdash; acumuló <strong>415.000 hectáreas</strong> en Santa Cruz: el equivalente a <strong>20 superficies de CABA</strong>.</p>
+  <p>Arrastrá cada pieza a su hueco en Santa Cruz. Antes de arrastrar, rotala hasta que coincida.</p>
+  <button class="btn" onclick="startGame()">Jugar →</button>
+</div>
+
+<div id="puzzle">
+  <div id="hdr">
+    <h2>Colocá las 20 CABA en Santa Cruz</h2>
+    <div id="ctr">Colocadas: <b id="pcount">0</b> / 20</div>
+  </div>
+  <div id="board">
+    <div id="map-wrap">
+      <svg id="sc-svg" viewBox="0 0 416 520">
+        <path d="M104.1,117.7 L105.9,111.1 L99.8,105.2 L104,100.6 L102.4,87.2 L114.8,76 L111,45.8 L104.1,38.4 L116.2,28 L303.2,28 L301.3,39.9 L310.4,69.3 L323.9,79.4 L339.7,101.2 L376.8,105.5 L387.6,115.5 L388,137.7 L382.9,154.6 L374.4,154.4 L358,163.5 L380.4,156.6 L386.8,169.6 L379.2,169.1 L379.7,181.6 L370.9,182.3 L360.2,199 L324.6,222.3 L320.8,232.8 L304.3,247.1 L297.2,268.9 L291.7,273.6 L296.6,274.4 L302,265.3 L291.6,315.3 L280.4,325 L268.2,327.2 L253.9,301.1 L249.9,298.9 L257.4,313.4 L237.3,319.2 L257.1,316.5 L267.8,329.5 L243.6,342.7 L234.5,359.3 L231.7,384.3 L219.1,397.4 L230.3,389.7 L239.7,432 L220.6,431.8 L209.6,436.7 L224,434.4 L230.8,437.4 L228.8,441.2 L239.2,436.3 L267.1,486.2 L264.7,492 L263,485.7 L194.2,464.5 L103.9,463.2 L100.9,452.7 L79.4,431.5 L88.2,409.1 L81.5,399 L87.9,388.4 L84.1,372.6 L86.2,365.8 L65.3,363.4 L46,373.1 L41.1,342.8 L29.7,328.9 L32.1,319.3 L28,312.8 L32.7,301.2 L45.1,295.6 L51.4,286.3 L46.3,259.8 L53.7,245.3 L71.6,232.9 L73.6,206.2 L86.5,197.6 L84.3,178.5 L75.1,167.2 L84.3,144.4 L83.5,133.5 L92.2,130.3 L98.7,115Z"
+          fill="var(--bg2)" stroke="var(--border2)" stroke-width="1.5"/>
+        <text x="200" y="18" font-size="9" fill="var(--text3)" text-anchor="middle" font-family="inherit">Santa Cruz · 24.394.300 ha</text>
+        <g id="holes-g"></g>
+        <g id="placed-g"></g>
+      </svg>
+    </div>
+
+    <div id="side">
+      <div>
+        <h3>Piezas disponibles</h3>
+        <div id="tray"></div>
+      </div>
+      <div id="rot-box">
+        <div class="empty-lbl">Seleccioná<br>una pieza</div>
+      </div>
+      <div class="hint">
+        <strong style="font-size:11px">Cómo jugar:</strong><br>
+        1. Hacé click en una pieza<br>
+        2. Rotala con el botón<br>
+        3. Arrastrala al hueco correcto
+      </div>
+      <div class="disc">
+        Posiciones simbólicas. Luciani sumó las superficies de todas las estancias de Báez en Santa Cruz.<br><br>
+        <a href="https://www.lanacion.com.ar/politica/los-numeros-de-la-estafa-segun-los-fiscales-lazaro-baez-compro-20-ciudades-de-buenos-aires-nid19082022/" target="_blank" rel="noopener">Fuente: La Nación →</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="ghost">
+  <svg viewBox="0 0 60 52" width="50" height="43">
+    <path d="M21,0 L42,9.6 L49.4,16.3 L56,25.7 L54.3,28.3 L49.8,31.9 L41.8,32.8 L36,36.7 L27.6,48 L6.2,35.8 L2,25 L6.9,8.6Z" fill="var(--blue)" opacity=".8"/>
+  </svg>
+</div>
+
+<div id="win">
+  <div class="big-num">415.000 ha</div>
+  <div class="big-lbl">= 20 &times; Ciudad de Buenos Aires &middot; propiedad de 1 solo hombre</div>
+  <h2>Todo esto fue de una sola persona</h2>
+  <p>Lázaro Báez era monotributista en 2003. Al terminar el segundo mandato de Cristina Kirchner, era dueño de 415.000 hectáreas solo en Santa Cruz, financiadas con obra pública adjudicada irregularmente.</p>
+  <blockquote>"Este monotributista, al concluir el segundo mandato de Cristina Fernández, era dueño de 415.000 hectáreas solo en la provincia de Santa Cruz. La Ciudad de Buenos Aires tiene una superficie de 20.300 hectáreas &mdash; Báez y su grupo compraron el equivalente a 20 ciudades de Buenos Aires."</blockquote>
+  <div class="src">
+    Fiscal Diego Luciani · causa Vialidad · 19/08/2022<br>
+    <a href="https://www.lanacion.com.ar/politica/los-numeros-de-la-estafa-segun-los-fiscales-lazaro-baez-compro-20-ciudades-de-buenos-aires-nid19082022/" target="_blank" rel="noopener">La Nación →</a>
+    &nbsp;·&nbsp;
+    <a href="https://www.ellitoral.com/politica/juicio-cristina-fernandez-fiscal-luciani-acusacion-papa-francisco-lazaro-baez_0_bCuV3YkvDR.html" target="_blank" rel="noopener">El Litoral →</a>
+  </div>
+  <button class="btn" onclick="resetGame()" style="margin-top:1.5rem">Jugar de nuevo</button>
+</div>
+
+<script>
+const CABA = "M21,0 L42,9.6 L49.4,16.3 L56,25.7 L54.3,28.3 L49.8,31.9 L41.8,32.8 L36,36.7 L27.6,48 L6.2,35.8 L2,25 L6.9,8.6Z";
+const PCX = 29, PCY = 26, SC = 0.55; // piece center, scale
+
+const HOLES = [
+  {x:262.3,y:241.6,rot:45},  {x:116.7,y:429.6,rot:135},
+  {x:178.1,y:428.3,rot:90},  {x:157.3,y:211.4,rot:270},
+  {x:146.8,y:367.7,rot:315}, {x:235.7,y:70.6,rot:180},
+  {x:311.7,y:151.1,rot:90},  {x:121.8,y:158.5,rot:270},
+  {x:182.5,y:300.6,rot:270}, {x:93.7,y:274.1,rot:135},
+  {x:165.8,y:93.8,rot:315},  {x:198.1,y:353.6,rot:45},
+  {x:270.4,y:115.0,rot:180}, {x:82.9,y:338.3,rot:315},
+  {x:211.1,y:150.8,rot:135}, {x:208.3,y:211.2,rot:180},
+  {x:307.5,y:202.7,rot:225}, {x:260.5,y:185.3,rot:45},
+  {x:228.8,y:280.9,rot:90},  {x:107.3,y:223.5,rot:315},
+];
+
+const NS = "http://www.w3.org/2000/svg";
+let selId = null, curRot = 0, placed = 0;
+const pieceRots  = new Array(21).fill(0);
+const pieceDone  = new Array(21).fill(false);
+
+// drag state
+let isDragging = false, dragId = null;
+const ghost = document.getElementById('ghost');
+
+function startGame(){
+  document.getElementById('intro').style.display = 'none';
+  document.getElementById('puzzle').style.display = 'block';
+  buildTray(); buildHoles();
+}
+
+// ── TRAY ──────────────────────────────────────────────────────
+function buildTray(){
+  const tray = document.getElementById('tray');
+  tray.innerHTML = '';
+  for(let i=1;i<=20;i++){
+    const el = document.createElement('div');
+    el.className = 'pc'; el.id = 'pc'+i;
+    el.innerHTML = `<svg viewBox="0 0 60 52"><path d="${CABA}" fill="var(--blue)" opacity=".8"/></svg>`;
+    el.addEventListener('mousedown', e => onPieceMouseDown(e, i));
+    el.addEventListener('touchstart', e => onPieceTouchStart(e, i), {passive:false});
+    tray.appendChild(el);
+  }
+}
+
+// ── HOLES ─────────────────────────────────────────────────────
+function buildHoles(){
+  const g = document.getElementById('holes-g');
+  g.innerHTML = '';
+  HOLES.forEach(({x,y,rot},i)=>{
+    const gr = document.createElementNS(NS,'g');
+    gr.id = 'hole'+(i+1);
+    gr.dataset.idx = i;
+    gr.dataset.filled = '0';
+
+    // dashed outline in CABA shape, rotated to target angle
+    const p = document.createElementNS(NS,'path');
+    p.setAttribute('d', CABA);
+    p.setAttribute('fill','var(--bluebg)');
+    p.setAttribute('stroke','var(--blue)');
+    p.setAttribute('stroke-width','1.2');
+    p.setAttribute('stroke-dasharray','4 2.5');
+    // translate so piece center lands on (x,y), then rotate around (x,y)
+    p.setAttribute('transform',
+      `rotate(${rot},${x},${y}) translate(${x-PCX*SC},${y-PCY*SC}) scale(${SC})`);
+    gr.appendChild(p);
+
+    const lbl = document.createElementNS(NS,'text');
+    lbl.setAttribute('x',x); lbl.setAttribute('y',y+3.5);
+    lbl.setAttribute('text-anchor','middle');
+    lbl.setAttribute('font-size','8');
+    lbl.setAttribute('fill','var(--blue)');
+    lbl.setAttribute('pointer-events','none');
+    lbl.setAttribute('font-family','inherit');
+    lbl.textContent = i+1;
+    gr.appendChild(lbl);
+
+    g.appendChild(gr);
+  });
+}
+
+// ── SELECT / ROT BOX ──────────────────────────────────────────
+function selectPiece(n){
+  if(pieceDone[n]) return;
+  document.querySelectorAll('.pc').forEach(p=>{
+    p.classList.remove('active');
+    const s = p.querySelector('svg');
+    if(s) s.style.transform = '';
+  });
+  selId = n; curRot = pieceRots[n];
+  const el = document.getElementById('pc'+n);
+  el.classList.add('active');
+  const s = el.querySelector('svg');
+  if(s){ s.style.transform = `rotate(${curRot}deg)`; s.style.transition = 'transform .2s'; }
+  renderRotBox();
+}
+
+function renderRotBox(){
+  const box = document.getElementById('rot-box');
+  if(!selId){ box.innerHTML='<div class="empty-lbl">Seleccioná<br>una pieza</div>'; return; }
+  box.innerHTML = `
+    <div id="rot-preview" style="transform:rotate(${curRot}deg);transition:transform .2s">
+      <svg viewBox="0 0 60 52" width="54" height="46">
+        <path d="${CABA}" fill="var(--blue)" opacity=".85"/>
+      </svg>
+    </div>
+    <button class="btn-rot" onclick="rotateSel()">&#8635; Girar 45°</button>
+    <div class="rot-deg">${curRot}°</div>`;
+}
+
+function rotateSel(){
+  if(!selId) return;
+  curRot = (curRot+45)%360;
+  pieceRots[selId] = curRot;
+  // update tray miniature
+  const s = document.getElementById('pc'+selId).querySelector('svg');
+  if(s) s.style.transform = `rotate(${curRot}deg)`;
+  // update ghost if dragging
+  if(isDragging) ghost.style.transform = `translate(-50%,-50%) rotate(${curRot}deg)`;
+  renderRotBox();
+}
+
+// ── DRAG — MOUSE ──────────────────────────────────────────────
+function onPieceMouseDown(e, id){
+  if(pieceDone[id]) return;
+  e.preventDefault();
+  selectPiece(id);
+  beginDrag(id, e.clientX, e.clientY);
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup',   onMouseUp);
+}
+function onMouseMove(e){ moveGhost(e.clientX, e.clientY); }
+function onMouseUp(e){
+  document.removeEventListener('mousemove', onMouseMove);
+  document.removeEventListener('mouseup',   onMouseUp);
+  endDrag(e.clientX, e.clientY);
+}
+
+// ── DRAG — TOUCH ──────────────────────────────────────────────
+function onPieceTouchStart(e, id){
+  if(pieceDone[id]) return;
+  e.preventDefault();
+  selectPiece(id);
+  const t = e.touches[0];
+  beginDrag(id, t.clientX, t.clientY);
+  document.addEventListener('touchmove', onTouchMove, {passive:false});
+  document.addEventListener('touchend',  onTouchEnd);
+}
+function onTouchMove(e){ e.preventDefault(); const t=e.touches[0]; moveGhost(t.clientX,t.clientY); }
+function onTouchEnd(e){
+  document.removeEventListener('touchmove', onTouchMove);
+  document.removeEventListener('touchend',  onTouchEnd);
+  const t = e.changedTouches[0];
+  endDrag(t.clientX, t.clientY);
+}
+
+// ── DRAG HELPERS ──────────────────────────────────────────────
+function beginDrag(id, cx, cy){
+  isDragging = true; dragId = id;
+  ghost.style.display = 'block';
+  ghost.style.transition = 'none';
+  ghost.style.transform = `translate(-50%,-50%) rotate(${pieceRots[id]}deg)`;
+  moveGhost(cx, cy);
+}
+function moveGhost(cx, cy){
+  ghost.style.left = cx+'px';
+  ghost.style.top  = cy+'px';
+}
+function endDrag(cx, cy){
+  isDragging = false;
+  ghost.style.display = 'none';
+
+  // Convert client coords → SVG coords
+  const svg = document.getElementById('sc-svg');
+  const rect = svg.getBoundingClientRect();
+  const vb = svg.viewBox.baseVal;
+  const scaleX = vb.width  / rect.width;
+  const scaleY = vb.height / rect.height;
+  const svgX = (cx - rect.left)  * scaleX;
+  const svgY = (cy - rect.top)   * scaleY;
+
+  // Find closest unfilled hole within snap radius
+  const SNAP = 28; // SVG units
+  let best = null, bestDist = Infinity;
+  HOLES.forEach(({x,y},i)=>{
+    const hole = document.getElementById('hole'+(i+1));
+    if(hole.dataset.filled==='1') return;
+    const dist = Math.hypot(svgX-x, svgY-y);
+    if(dist < SNAP && dist < bestDist){ bestDist=dist; best=i+1; }
+  });
+
+  if(best !== null) tryPlace(dragId, best);
+  dragId = null;
+}
+
+// ── PLACE ─────────────────────────────────────────────────────
+function tryPlace(pieceId, holeNum){
+  const hole = document.getElementById('hole'+holeNum);
+  if(!hole || hole.dataset.filled==='1') return;
+
+  const holeRot = HOLES[holeNum-1].rot;
+  const myRot   = pieceRots[pieceId] || 0;
+  const diff    = ((myRot - holeRot) % 360 + 360) % 360;
+
+  if(diff !== 0){ flashWrong(hole); return; }
+
+  // Accept
+  hole.dataset.filled = '1';
+  const {x,y,rot} = HOLES[holeNum-1];
+
+  const pg = document.getElementById('placed-g');
+  const fp = document.createElementNS(NS,'path');
+  fp.setAttribute('d', CABA);
+  fp.setAttribute('fill','var(--blue)');
+  fp.setAttribute('fill-opacity','0.72');
+  fp.setAttribute('stroke','none');
+  fp.setAttribute('pointer-events','none');
+  fp.setAttribute('transform',
+    `rotate(${rot},${x},${y}) translate(${x-PCX*SC},${y-PCY*SC}) scale(${SC})`);
+  pg.appendChild(fp);
+
+  // Fade out hole outline
+  const hp = hole.querySelector('path');
+  if(hp){ hp.setAttribute('stroke-opacity','0'); hp.setAttribute('fill-opacity','0'); }
+  const hl = hole.querySelector('text');
+  if(hl) hl.setAttribute('fill-opacity','0');
+
+  pieceDone[pieceId] = true;
+  const el = document.getElementById('pc'+pieceId);
+  el.classList.add('done'); el.classList.remove('active');
+  if(selId===pieceId){ selId=null; curRot=0; renderRotBox(); }
+
+  placed++;
+  document.getElementById('pcount').textContent = placed;
+  if(placed===20) setTimeout(winGame, 700);
+}
+
+function flashWrong(hole){
+  const p = hole.querySelector('path');
+  if(!p) return;
+  p.setAttribute('stroke','var(--red)');
+  p.setAttribute('stroke-width','2.5');
+  setTimeout(()=>{
+    p.setAttribute('stroke','var(--blue)');
+    p.setAttribute('stroke-width','1.2');
+  }, 380);
+}
+
+function winGame(){
+  document.getElementById('puzzle').style.display='none';
+  document.getElementById('win').style.display='block';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function resetGame(){
+  placed=0; selId=null; curRot=0;
+  pieceRots.fill(0); pieceDone.fill(false);
+  document.getElementById('placed-g').innerHTML='';
+  document.getElementById('win').style.display='none';
+  document.getElementById('intro').style.display='block';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
+</body>
+</html>
